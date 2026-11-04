@@ -116,6 +116,17 @@ def test_error_log_only_reads_configured_path_and_reports_truncation(tmp_path):
         TargetConfig("lab", error_log="../secret")
 
 
+def test_error_log_refuses_own_audit_directory_even_through_symlink(monkeypatch, tmp_path):
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / "audit.db").write_text("private")
+    link = tmp_path / "linked-audit"
+    link.symlink_to(state / "audit.db")
+    monkeypatch.setenv("APACHE_AIOPS_HOME", str(state))
+    with pytest.raises(ValueError, match="audit/config"):
+        TargetConfig("lab", error_log=str(link))
+
+
 def test_graceful_reload_preflights_and_reports_unknown(monkeypatch, tmp_path):
     from apache_aiops.governance.audit import reset_engine
     from apache_aiops.mcp_server.tools import httpd as tools

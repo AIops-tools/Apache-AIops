@@ -34,8 +34,12 @@ class TargetConfig:
             url = urlsplit(configured_url)
             if url.scheme not in ("http", "https") or not url.hostname or url.username:
                 raise ValueError("Probe/status URL must be HTTP(S) without embedded credentials.")
-        if self.error_log and not Path(self.error_log).is_absolute():
-            raise ValueError("error_log must be an absolute operator-configured path.")
+        if self.error_log:
+            path = Path(self.error_log)
+            if not path.is_absolute():
+                raise ValueError("error_log must be an absolute operator-configured path.")
+            if path.resolve().is_relative_to(ops_home().resolve()):
+                raise ValueError("error_log cannot read this tool's audit/config directory.")
 
     @property
     def verify(self) -> bool | str:
