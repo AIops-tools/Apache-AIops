@@ -7,7 +7,7 @@
 | The HTTP probe URL is configured by the operator; the agent cannot choose a URL. | `config.py:TargetConfig`, `mcp_server/tools/httpd.py` |
 | HTTP probe reads headers and status without returning a body. | `connection.py:probe` |
 | A failed diagnostic probe remains an error with `data: null`. | `ops/httpd.py:diagnose` |
-| `mod_status` and error-log reads are operator configured and bounded. | `config.py:TargetConfig`, `connection.py:server_status`, `connection.py:error_log` |
+| `mod_status`, error-log and access-log reads are operator configured and bounded; the access summary returns no raw request data. | `config.py:TargetConfig`, `connection.py:server_status`, `connection.py:error_log`, `connection.py:access_status` |
 | Graceful reload first runs configtest; dry-run never invokes graceful. | `mcp_server/tools/httpd.py:apache_graceful_reload` |
 
 A successful `configtest` proves syntax, not that upstream application backends are healthy. A missing HTTP probe is an unperformed check. A returned graceful command still reports unknown because existing workers may hold old config; inspect status and traffic before retrying.

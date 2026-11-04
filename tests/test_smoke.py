@@ -20,7 +20,7 @@ def test_cli_builds_and_mcp_tools_are_governed():
 
     assert CliRunner().invoke(app, ["--help"]).exit_code == 0
     listed = asyncio.run(mcp.list_tools())
-    assert len(listed) == 16
+    assert len(listed) == 17
     for name, tool in mcp._tool_manager._tools.items():
         assert tool.fn._is_governed_tool, name
         doc = (tool.fn.__doc__ or "").lstrip()

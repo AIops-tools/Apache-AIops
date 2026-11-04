@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 import atexit
+import os
+import re
 import subprocess
 import threading
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
 import httpx
 
 from apache_aiops.config import AppConfig, TargetConfig, load_config
+from apache_aiops.governance.paths import ops_home
 
 _OUTPUT_MAX = 12000
+_ACCESS_STATUS = re.compile(
+    r'^\S+\s+\S+\s+\S+\s+\[[^]]+\]\s+"(?:\\.|[^"\\])*"\s+([1-5][0-9]{2})\s+'
+)
 
 
 class ApacheCommandError(Exception):
@@ -121,8 +128,22 @@ class ApacheConnection:
             raise ValueError("limit must be between 1 and 200.")
         if not self.target.error_log:
             raise ValueError("No error_log configured for this Apache target.")
-        path = Path(self.target.error_log)
-        with path.open("rb") as stream:
+        selected, truncated = self._tail_log(Path(self.target.error_log), limit)
+        return {
+            "items": [{"line": line[:800] + ("…" if len(line) > 800 else "")}
+                      for line in selected],
+            "returned": len(selected), "limit": limit,
+            "truncated": truncated or any(len(x) > 800 for x in selected),
+        }
+
+    @staticmethod
+    def _tail_log(path: Path, limit: int) -> tuple[list[str], bool]:
+        # Recheck on every call: a configured symlink may have changed since init.
+        resolved = path.resolve(strict=True)
+        if resolved.is_relative_to(ops_home().resolve()):
+            raise ValueError("Log path cannot read this tool's audit/config directory.")
+        descriptor = os.open(resolved, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(descriptor, "rb") as stream:
             size = stream.seek(0, 2)
             start = max(0, size - 65536)
             stream.seek(start)
@@ -131,11 +152,30 @@ class ApacheConnection:
         if start and lines:
             lines = lines[1:]
         selected = lines[-limit:]
+        return selected, bool(start or len(lines) > limit)
+
+    def access_status(self, limit: int = 200) -> dict:
+        """Summarize common/combined logs without returning URLs, IPs or headers."""
+        if not 1 <= limit <= 500:
+            raise ValueError("limit must be between 1 and 500.")
+        if not self.target.access_log:
+            raise ValueError("No access_log configured for this Apache target.")
+        selected, truncated = self._tail_log(Path(self.target.access_log), limit)
+        statuses = []
+        unparsed = 0
+        for line in selected:
+            match = _ACCESS_STATUS.match(line)
+            if match is None:
+                unparsed += 1
+            else:
+                statuses.append(int(match.group(1)))
+        classes = Counter(f"{code // 100}xx" for code in statuses)
         return {
-            "items": [{"line": line[:800] + ("…" if len(line) > 800 else "")}
-                      for line in selected],
-            "returned": len(selected), "limit": limit,
-            "truncated": bool(start or len(lines) > limit or any(len(x) > 800 for x in selected)),
+            "items": [{"statusCode": code} for code in statuses],
+            "returned": len(statuses), "limit": limit, "truncated": truncated,
+            "sampledLines": len(selected), "unparsedLines": unparsed,
+            "sampleParseComplete": unparsed == 0,
+            "statusClasses": {f"{code}xx": classes.get(f"{code}xx", 0) for code in range(1, 6)},
         }
 
     def probe(self) -> dict:

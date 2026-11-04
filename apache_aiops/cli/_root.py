@@ -80,6 +80,14 @@ def error_log(limit: int = 50, target: Target = None) -> None:
     _print(apache_error_log(limit=limit, target=target))
 
 
+@app.command("access-status")
+@cli_errors
+def access_status(limit: int = 200, target: Target = None) -> None:
+    """Summarize recent common/combined access-log status codes."""
+    from apache_aiops.mcp_server.tools.httpd import apache_access_status
+    _print(apache_access_status(limit=limit, target=target))
+
+
 @app.command("graceful-reload")
 @cli_errors
 def graceful_reload(dry_run: bool = False, target: Target = None) -> None:
@@ -98,13 +106,23 @@ def init() -> None:
 
     name = typer.prompt("Target name", default="local")
     probe_url = typer.prompt("HTTP health URL (optional)", default="")
-    chosen = TargetConfig(name=name, probe_url=probe_url or None)
+    status_url = typer.prompt("mod_status auto URL (optional)", default="")
+    error_log = typer.prompt("Absolute error log path (optional)", default="")
+    access_log = typer.prompt("Absolute access log path (optional)", default="")
+    chosen = TargetConfig(
+        name=name, probe_url=probe_url or None, status_url=status_url or None,
+        error_log=error_log or None, access_log=access_log or None,
+    )
     path = ops_home() / "config.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         raise ValueError(f"Config exists at {path}; edit it to add a target.")
     path.write_text(
-        yaml.safe_dump({"targets": [{"name": chosen.name, "probe_url": chosen.probe_url}]})
+        yaml.safe_dump({"targets": [{
+            "name": chosen.name, "probe_url": chosen.probe_url,
+            "status_url": chosen.status_url, "error_log": chosen.error_log,
+            "access_log": chosen.access_log,
+        }]})
     )
     path.chmod(0o600)
     console.print(f"Configured {name} at {path}")

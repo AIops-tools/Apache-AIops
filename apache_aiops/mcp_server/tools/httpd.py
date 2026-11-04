@@ -64,6 +64,14 @@ def apache_error_log(limit: int = 50, target: Optional[str] = None) -> dict:
 
 
 @mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_access_status(limit: int = 200, target: Optional[str] = None) -> dict:
+    """[READ] Count HTTP statuses in recent common/combined access logs, without raw requests."""
+    return httpd.access_status(_get_connection(target), limit)
+
+
+@mcp.tool()
 @governed_tool(risk_level="medium")
 @tool_errors()
 def apache_graceful_reload(dry_run: bool = False, target: Optional[str] = None) -> dict:

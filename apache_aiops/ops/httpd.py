@@ -37,6 +37,10 @@ def error_log(conn: ApacheConnection, limit: int = 50) -> dict:
     return conn.error_log(limit)
 
 
+def access_status(conn: ApacheConnection, limit: int = 200) -> dict:
+    return conn.access_status(limit)
+
+
 def config_check(conn: ApacheConnection) -> dict:
     return conn.command("configtest")
 

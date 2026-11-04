@@ -6,6 +6,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
+import yaml
+from typer.testing import CliRunner
 
 from apache_aiops.config import TargetConfig
 from apache_aiops.connection import ApacheCommandError, ApacheConnection
@@ -133,6 +135,77 @@ def test_error_log_only_reads_configured_path_and_reports_truncation(tmp_path):
     }
     with pytest.raises(ValueError, match="absolute"):
         TargetConfig("lab", error_log="../secret")
+
+
+def test_access_status_summarizes_common_log_without_exposing_requests(tmp_path):
+    path = tmp_path / "access.log"
+    path.write_text(
+        '192.0.2.1 - user [10/Oct/2000:13:55:36 -0700] "GET /?token=secret HTTP/1.1" 200 42\n'
+        '192.0.2.2 - - [10/Oct/2000:13:56:36 -0700] "POST /private HTTP/1.1" 503 10 '
+        '"https://ref.example/" "agent"\n'
+        'custom format with private data\n'
+    )
+    conn = ApacheConnection(TargetConfig("lab", access_log=str(path)), runner=_runner)
+    result = conn.access_status(limit=3)
+    assert result["items"] == [{"statusCode": 200}, {"statusCode": 503}]
+    assert result["returned"] == 2 and result["unparsedLines"] == 1
+    assert result["sampleParseComplete"] is False
+    assert result["statusClasses"]["5xx"] == 1
+    assert "secret" not in str(result) and "192.0.2.1" not in str(result)
+    assert conn.access_status(limit=1)["truncated"] is True
+    with pytest.raises(ValueError, match="absolute"):
+        TargetConfig("lab", access_log="../private")
+
+
+def test_access_status_ignores_escaped_quote_and_fake_status_inside_request(tmp_path):
+    path = tmp_path / "access.log"
+    path.write_text(
+        '192.0.2.1 - - [10/Oct/2000:13:55:36 -0700] '
+        '"GET /\\" 503 / HTTP/1.1" 200 42\n'
+    )
+    result = ApacheConnection(TargetConfig("lab", access_log=str(path))).access_status()
+    assert result["items"] == [{"statusCode": 200}]
+    assert result["statusClasses"]["5xx"] == 0
+
+
+def test_access_status_marks_bounded_tail_as_truncated(tmp_path):
+    path = tmp_path / "access.log"
+    path.write_text(
+        "x" * 70000 + "\n"
+        '192.0.2.1 - - [10/Oct/2000:13:55:36 -0700] "GET / HTTP/1.1" 503 4\n'
+    )
+    result = ApacheConnection(TargetConfig("lab", access_log=str(path))).access_status()
+    assert result["items"] == [{"statusCode": 503}]
+    assert result["truncated"] is True
+
+
+def test_log_symlink_swapped_into_audit_home_is_rejected_at_read(monkeypatch, tmp_path):
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / "audit.db").write_text("private")
+    original = tmp_path / "access.log"
+    original.write_text("safe")
+    link = tmp_path / "current.log"
+    link.symlink_to(original)
+    monkeypatch.setenv("APACHE_AIOPS_HOME", str(state))
+    conn = ApacheConnection(TargetConfig("lab", access_log=str(link)), runner=_runner)
+    link.unlink()
+    link.symlink_to(state / "audit.db")
+    with pytest.raises(ValueError, match="audit/config"):
+        conn.access_status()
+
+
+def test_init_records_operator_selected_status_and_log_paths(monkeypatch, tmp_path):
+    from apache_aiops.cli import app
+
+    monkeypatch.setenv("APACHE_AIOPS_HOME", str(tmp_path / "state"))
+    supplied = "lab\nhttp://127.0.0.1/health\nhttp://127.0.0.1/status?auto\n"
+    supplied += f"{tmp_path}/error.log\n{tmp_path}/access.log\n"
+    result = CliRunner().invoke(app, ["init"], input=supplied)
+    assert result.exit_code == 0, result.output
+    target = yaml.safe_load((tmp_path / "state" / "config.yaml").read_text())["targets"][0]
+    assert target["status_url"] == "http://127.0.0.1/status?auto"
+    assert target["access_log"] == str(tmp_path / "access.log")
 
 
 def test_error_log_refuses_own_audit_directory_even_through_symlink(monkeypatch, tmp_path):

@@ -1,7 +1,7 @@
 {
   "id": "apache-aiops",
   "name": "Apache HTTP Server AIops",
-  "description": "Governed Apache HTTP Server operations — 13 MCP tools with audit.",
+  "description": "Governed Apache HTTP Server operations — 17 MCP tools with audit.",
   "skills": [
     "./skills"
   ],
