@@ -2,9 +2,65 @@
 
 from typing import Optional
 
-from apache_aiops.governance import governed_tool
+from apache_aiops.governance import governed_tool, mark_unknown
 from apache_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
 from apache_aiops.ops import httpd
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_build(target: Optional[str] = None) -> dict:
+    """[READ] Show Apache build options and compiled paths."""
+    return httpd.build(_get_connection(target))
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_runtime_config(target: Optional[str] = None) -> dict:
+    """[READ] Dump Apache's parsed runtime configuration."""
+    return httpd.runtime_config(_get_connection(target))
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_server_status(target: Optional[str] = None) -> dict:
+    """[READ] Get bounded machine-readable mod_status metrics from configured URL."""
+    return httpd.server_status(_get_connection(target))
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_error_log(limit: int = 50, target: Optional[str] = None) -> dict:
+    """[READ] Tail an operator-configured Apache error log, with explicit truncation."""
+    return httpd.error_log(_get_connection(target), limit)
+
+
+@mcp.tool()
+@governed_tool(risk_level="medium")
+@tool_errors()
+def apache_graceful_reload(dry_run: bool = False, target: Optional[str] = None) -> dict:
+    """[WRITE] Config-check then request a graceful reload; outcome needs operator check."""
+    conn = _get_connection(target)
+    check = httpd.config_check(conn)
+    before = httpd.probe(conn) if conn.target.probe_url else None
+    if dry_run:
+        return {"dryRun": True, "configCheck": check, "probeBefore": before,
+                "wouldRun": "apachectl graceful"}
+    response = conn.graceful()
+    try:
+        after = httpd.probe(conn) if conn.target.probe_url else None
+    except Exception as exc:
+        return mark_unknown({"accepted": True, "response": response, "probeAfter": None,
+                             "probeError": f"Probe failed after reload: {type(exc).__name__}"})
+    return mark_unknown({
+        "accepted": True, "response": response, "probeBefore": before,
+        "probeAfter": after,
+        "note": "A successful command/probe does not prove all workers loaded new config.",
+    })
 
 
 @mcp.tool()

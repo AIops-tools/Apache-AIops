@@ -1,6 +1,8 @@
 """Apache control-command and HTTP-probe semantics against strict fakes."""
 
 import subprocess
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
@@ -54,6 +56,16 @@ def test_http_probe_reports_503_as_unhealthy_without_reading_body():
     assert calls == [("GET", "http://127.0.0.1/health")]
 
 
+def test_http_probe_does_not_call_login_redirect_healthy():
+    client = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(302, headers={"Location": "/login"})))
+    target = TargetConfig("lab", probe_url="http://127.0.0.1/health")
+    result = ApacheConnection(target, runner=_runner, client=client).probe()
+    assert result["statusCode"] == 302
+    assert result["healthy"] is False
+    assert result["location"] == "/login"
+
+
 def test_config_failure_is_error_and_diagnosis_is_incomplete():
     def runner(argv, **kwargs):
         if argv == ["apachectl", "configtest"]:
@@ -72,3 +84,118 @@ def test_config_failure_is_error_and_diagnosis_is_incomplete():
 def test_probe_url_cannot_embed_credentials():
     with pytest.raises(ValueError, match="embedded credentials"):
         TargetConfig("lab", probe_url="https://user:secret@example.org/health")
+
+
+def test_mod_status_is_bounded_and_rejects_html():
+    def handler(request):
+        assert str(request.url) == "http://127.0.0.1/server-status?auto"
+        return httpx.Response(200, text="BusyWorkers: 3\nIdleWorkers: 7\n")
+
+    target = TargetConfig("lab", status_url="http://127.0.0.1/server-status?auto")
+    conn = ApacheConnection(target, runner=_runner,
+                            client=httpx.Client(transport=httpx.MockTransport(handler)))
+    result = conn.server_status()
+    assert result["fields"] == {"BusyWorkers": "3", "IdleWorkers": "7"}
+    assert result["truncated"] is False
+
+    html = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, text="Host: fake status page\n")))
+    with pytest.raises(ApacheCommandError, match="mod_status"):
+        ApacheConnection(target, runner=_runner, client=html).server_status()
+
+
+def test_error_log_only_reads_configured_path_and_reports_truncation(tmp_path):
+    path = tmp_path / "error.log"
+    path.write_text("\n".join(f"line {i}" for i in range(10)))
+    conn = ApacheConnection(TargetConfig("lab", error_log=str(path)), runner=_runner)
+    assert conn.error_log(limit=2) == {
+        "items": [{"line": "line 8"}, {"line": "line 9"}],
+        "returned": 2, "limit": 2, "truncated": True,
+    }
+    with pytest.raises(ValueError, match="absolute"):
+        TargetConfig("lab", error_log="../secret")
+
+
+def test_graceful_reload_preflights_and_reports_unknown(monkeypatch, tmp_path):
+    from apache_aiops.governance.audit import reset_engine
+    from apache_aiops.mcp_server.tools import httpd as tools
+
+    seen = []
+
+    def runner(argv, **kwargs):
+        seen.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "Syntax OK", "")
+
+    conn = ApacheConnection(TargetConfig("lab"), runner=runner)
+    monkeypatch.setattr(tools, "_get_connection", lambda target=None: conn)
+    monkeypatch.setenv("APACHE_AIOPS_HOME", str(tmp_path))
+    reset_engine()
+    try:
+        assert tools.apache_graceful_reload(dry_run=True)["dryRun"] is True
+        assert ["apachectl", "graceful"] not in seen
+        result = tools.apache_graceful_reload()
+        assert result["outcomeUnknown"] is True
+        assert ["apachectl", "graceful"] in seen
+    finally:
+        reset_engine()
+
+
+def test_graceful_timeout_unknown_but_syntax_error_blocks_write(monkeypatch, tmp_path):
+    from apache_aiops.governance.audit import reset_engine
+    from apache_aiops.mcp_server.tools import httpd as tools
+
+    failure = "timeout"
+    seen = []
+
+    def runner(argv, **kwargs):
+        seen.append(argv)
+        if argv == ["apachectl", "configtest"] and failure == "syntax":
+            return subprocess.CompletedProcess(argv, 1, "", "Syntax error")
+        if argv == ["apachectl", "graceful"]:
+            if failure == "exit-nonzero":
+                return subprocess.CompletedProcess(argv, 1, "", "signal maybe sent")
+            raise subprocess.TimeoutExpired(argv, 10)
+        return subprocess.CompletedProcess(argv, 0, "Syntax OK", "")
+
+    conn = ApacheConnection(TargetConfig("lab"), runner=runner)
+    monkeypatch.setattr(tools, "_get_connection", lambda target=None: conn)
+    monkeypatch.setenv("APACHE_AIOPS_HOME", str(tmp_path))
+    reset_engine()
+    try:
+        assert tools.apache_graceful_reload()["outcomeUnknown"] is True
+        failure = "exit-nonzero"
+        assert tools.apache_graceful_reload()["outcomeUnknown"] is True
+        failure = "syntax"
+        seen.clear()
+        result = tools.apache_graceful_reload()
+        assert "Syntax error" in result["error"]
+        assert ["apachectl", "graceful"] not in seen
+    finally:
+        reset_engine()
+
+
+def test_operator_loopback_probe_bypasses_environment_proxy(monkeypatch):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"healthy")
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:1")
+    monkeypatch.setenv("ALL_PROXY", "http://127.0.0.1:1")
+    monkeypatch.setenv("NO_PROXY", "")
+    try:
+        target = TargetConfig("lab", probe_url=f"http://127.0.0.1:{server.server_port}/health")
+        conn = ApacheConnection(target, runner=_runner)
+        assert conn.probe()["statusCode"] == 200
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

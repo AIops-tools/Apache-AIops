@@ -9,6 +9,22 @@ def version(conn: ApacheConnection) -> dict:
     return conn.command("-v")
 
 
+def build(conn: ApacheConnection) -> dict:
+    return conn.command("-V")
+
+
+def runtime_config(conn: ApacheConnection) -> dict:
+    return conn.command("-t", "-D", "DUMP_RUN_CFG")
+
+
+def server_status(conn: ApacheConnection) -> dict:
+    return conn.server_status()
+
+
+def error_log(conn: ApacheConnection, limit: int = 50) -> dict:
+    return conn.error_log(limit)
+
+
 def config_check(conn: ApacheConnection) -> dict:
     return conn.command("configtest")
 

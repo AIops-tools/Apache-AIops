@@ -9,7 +9,7 @@ from typing import Annotated
 import typer
 import yaml
 
-from apache_aiops.cli._common import cli_errors, console, governed
+from apache_aiops.cli._common import cli_errors, console, double_confirm, governed
 from apache_aiops.cli.undo import undo_app
 from apache_aiops.governance.paths import ops_home
 
@@ -22,6 +22,48 @@ Target = Annotated[str | None, typer.Option("--target", "-t", help="Configured A
 
 def _print(result: dict) -> None:
     console.print_json(json.dumps(governed(result)))
+
+
+@app.command("build")
+@cli_errors
+def build(target: Target = None) -> None:
+    """Show Apache build flags and paths."""
+    from apache_aiops.mcp_server.tools.httpd import apache_build
+    _print(apache_build(target=target))
+
+
+@app.command("runtime-config")
+@cli_errors
+def runtime_config(target: Target = None) -> None:
+    """Show parsed Apache runtime configuration."""
+    from apache_aiops.mcp_server.tools.httpd import apache_runtime_config
+    _print(apache_runtime_config(target=target))
+
+
+@app.command("server-status")
+@cli_errors
+def server_status(target: Target = None) -> None:
+    """Show configured mod_status auto metrics."""
+    from apache_aiops.mcp_server.tools.httpd import apache_server_status
+    _print(apache_server_status(target=target))
+
+
+@app.command("error-log")
+@cli_errors
+def error_log(limit: int = 50, target: Target = None) -> None:
+    """Tail the operator-configured Apache error log."""
+    from apache_aiops.mcp_server.tools.httpd import apache_error_log
+    _print(apache_error_log(limit=limit, target=target))
+
+
+@app.command("graceful-reload")
+@cli_errors
+def graceful_reload(dry_run: bool = False, target: Target = None) -> None:
+    """Check config and request an Apache graceful reload."""
+    from apache_aiops.mcp_server.tools.httpd import apache_graceful_reload
+    if not dry_run:
+        double_confirm("gracefully reload Apache", target or "default")
+    _print(apache_graceful_reload(dry_run=dry_run, target=target))
 
 
 @app.command("init")

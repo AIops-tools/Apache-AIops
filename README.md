@@ -1,11 +1,13 @@
 <!-- mcp-name: io.github.AIops-tools/apache-aiops -->
 # Apache AIops
 
-A dedicated, governed MCP server, CLI and skill for Apache HTTP Server. The 0.1.0 source tree provides 6 Apache read tools plus `undo_list` and `undo_apply`. It uses Apache's own `apachectl` diagnostics and an optional configured HTTP health URL. Every MCP call is audited and budgeted by the vendored governance harness.
+A dedicated, governed MCP server, CLI and skill for Apache HTTP Server with 13 MCP tools. It uses Apache's own `apachectl` diagnostics, optional operator-configured HTTP health and `mod_status` URLs, and a bounded operator-configured error log. Every call is audited and budgeted by the vendored governance harness.
 
 ## What it checks
 
 - Apache version, config syntax, parsed virtual hosts and loaded modules.
+- Build options and parsed runtime configuration.
+- Optional machine-readable `mod_status` metrics and bounded error-log tail.
 - Optional HTTP health status without downloading the response body.
 - `apache_diagnose` correlates the checks and preserves failures as errors with `data: null`.
 
@@ -18,6 +20,8 @@ targets:
   - name: local
     apachectl_bin: apachectl
     probe_url: http://127.0.0.1/health
+    status_url: http://127.0.0.1/server-status?auto
+    error_log: /var/log/apache2/error.log
     timeout: 10
     verify_ssl: true
 ```
@@ -26,4 +30,4 @@ Run `uv run apache-aiops diagnose`. The MCP entry point is `uv run apache-aiops-
 
 ## Scope and verification
 
-This first slice is read-only. It does not edit virtual hosts, reload the service, manage TLS certificates, or change modules. Those actions need a live lab showing config-check, reload result and recovery semantics. See [verification](docs/VERIFICATION.md). Missing operations and live-environment feedback are welcome as issues or PRs.
+`graceful-reload` first runs `configtest`, supports dry-run and two CLI confirmations, and reports an unknown final outcome even if the command returned: existing workers may still serve the old config. It has no safe inverse when the prior config file is not snapshotted. Vhost editing, TLS certificate management and module changes remain outside this release. See [verification](docs/VERIFICATION.md). Missing operations and live-environment feedback are welcome as issues or PRs.

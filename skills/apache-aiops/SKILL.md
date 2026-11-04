@@ -7,7 +7,7 @@ license: MIT
 homepage: https://github.com/AIops-tools/Apache-AIops
 tags: [aiops, mcp, governance, apache, httpd]
 description: >
-  Use this skill when a user needs to inspect or diagnose an Apache HTTP Server instance, verify config syntax, inspect parsed virtual hosts and modules, or check an operator-configured HTTP health URL. This first slice is read-only and requires local apachectl access.
+  Use this skill when a user needs to inspect or diagnose Apache HTTP Server, verify config syntax, inspect parsed virtual hosts and modules, read configured mod_status metrics or an error log, or perform a guarded graceful reload. It requires local apachectl access.
 installer:
   kind: uv
   package: apache-aiops
@@ -21,4 +21,4 @@ metadata: {"openclaw":{"requires":{"anyBins":["uvx"]},"optional":{"env":["APACHE
 
 Start with `apache-aiops diagnose` for version, syntax, virtual hosts, modules and optional HTTP status. Use `apache-aiops vhosts` when a request reaches the wrong site, and `apache-aiops config-check` when a reload fails. `apache-aiops init` configures a local target; `apache-aiops doctor` checks `apachectl` access.
 
-Read `failedProbes` and `complete` before summarizing results. An unconfigured HTTP probe is reported as `httpProbeConfigured: false`; do not infer that the service is responding. The MCP server registers 6 Apache read tools plus `undo_list` and `undo_apply`; this version records no Apache undo token. See [guardrails](references/agent-guardrails.md) and [capabilities](references/capabilities.md).
+Read `failedProbes` and `complete` before summarizing results. An unconfigured HTTP probe is reported as `httpProbeConfigured: false`; do not infer that the service is responding. The MCP server registers 10 Apache reads, one guarded reload and two governance tools. Reload has dry-run; a returned command is still `outcomeUnknown` until the target is checked. See [guardrails](references/agent-guardrails.md) and [capabilities](references/capabilities.md).

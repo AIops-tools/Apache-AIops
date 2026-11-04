@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 — 2026-11-04
 
-- Start a dedicated Apache HTTP Server MCP, CLI and skill with governed version, config, vhost, module and HTTP health diagnostics.
+- Expand to 13 governed MCP/CLI tools with build/runtime config, bounded mod_status and error-log reads.
+- Add configtest-preflighted graceful reload with dry-run and unknown-outcome reporting.
 - Preserve stderr output from Apache commands and report partial probe failures explicitly.
 
 ## 0.1.0

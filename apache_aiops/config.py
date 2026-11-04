@@ -17,6 +17,8 @@ class TargetConfig:
     name: str
     apachectl_bin: str = "apachectl"
     probe_url: str | None = None
+    status_url: str | None = None
+    error_log: str | None = None
     timeout: float = 10.0
     verify_ssl: bool = True
     ca_file: str | None = None
@@ -26,10 +28,14 @@ class TargetConfig:
             raise ValueError("name and apachectl_bin are required.")
         if self.timeout <= 0:
             raise ValueError("timeout must be positive.")
-        if self.probe_url:
-            url = urlsplit(self.probe_url)
+        for configured_url in (self.probe_url, self.status_url):
+            if not configured_url:
+                continue
+            url = urlsplit(configured_url)
             if url.scheme not in ("http", "https") or not url.hostname or url.username:
-                raise ValueError("probe_url must be an HTTP(S) URL without embedded credentials.")
+                raise ValueError("Probe/status URL must be HTTP(S) without embedded credentials.")
+        if self.error_log and not Path(self.error_log).is_absolute():
+            raise ValueError("error_log must be an absolute operator-configured path.")
 
     @property
     def verify(self) -> bool | str:

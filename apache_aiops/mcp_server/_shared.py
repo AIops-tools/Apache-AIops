@@ -11,8 +11,8 @@ from typing import Any, Optional
 from mcp.server import MCPServer
 
 from apache_aiops import __version__
-from apache_aiops.connection import ApacheCommandError, ConnectionManager
-from apache_aiops.governance import sanitize
+from apache_aiops.connection import ApacheCommandError, ApacheWriteUncertainError, ConnectionManager
+from apache_aiops.governance import mark_unknown, sanitize
 
 logger = logging.getLogger(__name__)
 _ERROR_MAX = 800
@@ -33,10 +33,13 @@ def tool_errors(shape: str = "dict") -> Callable:
                     )
                     else f"{type(exc).__name__}: operation failed."
                 )
-                return {
+                payload = {
                     "error": message,
                     "hint": "Run 'apache-aiops doctor' and check local command permissions.",
                 }
+                if isinstance(exc, ApacheWriteUncertainError):
+                    return mark_unknown(payload)
+                return payload
 
         return wrapper
 
@@ -47,7 +50,7 @@ mcp = MCPServer(
     "apache-aiops",
     version=__version__,
     instructions=(
-        "Read-only Apache HTTP Server config, vhost, module and HTTP diagnosis. "
+        "Governed Apache HTTP Server config, vhost, module and HTTP diagnosis. "
         "Every tool is audited and budgeted."
     ),
 )
