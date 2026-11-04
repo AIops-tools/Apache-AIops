@@ -17,6 +17,18 @@ def runtime_config(conn: ApacheConnection) -> dict:
     return conn.command("-t", "-D", "DUMP_RUN_CFG")
 
 
+def config_includes(conn: ApacheConnection) -> dict:
+    return conn.command("-t", "-D", "DUMP_INCLUDES")
+
+
+def compiled_modules(conn: ApacheConnection) -> dict:
+    return conn.command("-l")
+
+
+def static_directives(conn: ApacheConnection) -> dict:
+    return conn.command("-L")
+
+
 def server_status(conn: ApacheConnection) -> dict:
     return conn.server_status()
 

@@ -33,6 +33,25 @@ def test_config_and_vhosts_include_stderr_output():
     assert "NameVirtualHost" in httpd.vhosts(conn)["output"]
 
 
+def test_new_fixed_read_commands_have_no_shell_or_dynamic_arguments():
+    seen = []
+
+    def runner(argv, **kwargs):
+        seen.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "details\n", "")
+
+    conn = ApacheConnection(TargetConfig("lab"), runner=runner)
+    assert httpd.config_includes(conn)["output"] == "details\n"
+    httpd.compiled_modules(conn)
+    httpd.static_directives(conn)
+    assert seen == [
+        ["apachectl", "-t", "-D", "DUMP_INCLUDES"],
+        ["apachectl", "-l"], ["apachectl", "-L"],
+    ]
+    with pytest.raises(ValueError, match="fixed read-only"):
+        conn.command("-D", "DUMP_INCLUDES; bad")
+
+
 def test_unapproved_command_is_rejected_before_runner():
     conn = ApacheConnection(TargetConfig("lab"), runner=_runner)
     with pytest.raises(ValueError, match="fixed read-only"):

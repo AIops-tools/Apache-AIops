@@ -3,7 +3,7 @@
   "name": "apache-aiops",
   "displayName": "Apache HTTP Server AIops",
   "version": "0.2.0",
-  "description": "Governed Apache HTTP Server operations — 13 MCP tools with audit.",
+  "description": "Governed Apache HTTP Server operations — 16 MCP tools with audit.",
   "author": {
     "name": "Wei Zhou",
     "email": "zhouwei008@gmail.com",

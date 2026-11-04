@@ -10,6 +10,30 @@ from apache_aiops.ops import httpd
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
+def apache_config_includes(target: Optional[str] = None) -> dict:
+    """[READ] Show Apache's parsed config include tree with bounded output."""
+    return httpd.config_includes(_get_connection(target))
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_compiled_modules(target: Optional[str] = None) -> dict:
+    """[READ] List modules compiled into Apache, excluding dynamic modules."""
+    return httpd.compiled_modules(_get_connection(target))
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
+def apache_static_directives(target: Optional[str] = None) -> dict:
+    """[READ] List directives from Apache's static modules with bounded output."""
+    return httpd.static_directives(_get_connection(target))
+
+
+@mcp.tool()
+@governed_tool(risk_level="low")
+@tool_errors()
 def apache_build(target: Optional[str] = None) -> dict:
     """[READ] Show Apache build options and compiled paths."""
     return httpd.build(_get_connection(target))

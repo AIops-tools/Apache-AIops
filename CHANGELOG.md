@@ -1,8 +1,8 @@
 # Changelog
 
-## v0.2.0 — 2026-11-04
+## Unreleased
 
-- Expand to 13 governed MCP/CLI tools with build/runtime config, bounded mod_status and error-log reads.
+- Expand to 16 governed MCP/CLI tools with build/runtime config, bounded mod_status and error-log reads.
 - Add configtest-preflighted graceful reload with dry-run and unknown-outcome reporting.
 - Preserve stderr output from Apache commands and report partial probe failures explicitly.
 - Prevent error-log reads from resolving into this tool's own audit/config directory.

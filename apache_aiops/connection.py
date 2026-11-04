@@ -38,8 +38,9 @@ class ApacheConnection:
         self._client.close()
 
     def command(self, *args: str) -> dict:
-        allowed = {("-v",), ("-V",), ("-S",), ("-M",), ("configtest",),
-                   ("-t", "-D", "DUMP_RUN_CFG")}
+        allowed = {("-v",), ("-V",), ("-S",), ("-M",), ("-l",), ("-L",),
+                   ("configtest",), ("-t", "-D", "DUMP_RUN_CFG"),
+                   ("-t", "-D", "DUMP_INCLUDES")}
         if args not in allowed:
             raise ValueError("Only fixed read-only apachectl options are supported.")
         argv = [self.target.apachectl_bin, *args]

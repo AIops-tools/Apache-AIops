@@ -1,12 +1,13 @@
 <!-- mcp-name: io.github.AIops-tools/apache-aiops -->
 # Apache AIops
 
-A dedicated, governed MCP server, CLI and skill for Apache HTTP Server with 13 MCP tools. It uses Apache's own `apachectl` diagnostics, optional operator-configured HTTP health and `mod_status` URLs, and a bounded operator-configured error log. Every call is audited and budgeted by the vendored governance harness.
+A dedicated, governed MCP server, CLI and skill for Apache HTTP Server with 16 MCP tools. It uses Apache's own `apachectl` diagnostics, optional operator-configured HTTP health and `mod_status` URLs, and a bounded operator-configured error log. Every call is audited and budgeted by the vendored governance harness.
 
 ## What it checks
 
 - Apache version, config syntax, parsed virtual hosts and loaded modules.
 - Build options and parsed runtime configuration.
+- Parsed config include tree, compiled modules and directives from static modules.
 - Optional machine-readable `mod_status` metrics and bounded error-log tail.
 - Optional HTTP health status without downloading the response body.
 - `apache_diagnose` correlates the checks and preserves failures as errors with `data: null`.

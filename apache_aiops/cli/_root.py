@@ -24,6 +24,30 @@ def _print(result: dict) -> None:
     console.print_json(json.dumps(governed(result)))
 
 
+@app.command("config-includes")
+@cli_errors
+def config_includes(target: Target = None) -> None:
+    """Show the parsed Apache config include tree."""
+    from apache_aiops.mcp_server.tools.httpd import apache_config_includes
+    _print(apache_config_includes(target=target))
+
+
+@app.command("compiled-modules")
+@cli_errors
+def compiled_modules(target: Target = None) -> None:
+    """List modules compiled into Apache."""
+    from apache_aiops.mcp_server.tools.httpd import apache_compiled_modules
+    _print(apache_compiled_modules(target=target))
+
+
+@app.command("static-directives")
+@cli_errors
+def static_directives(target: Target = None) -> None:
+    """List directives supplied by static Apache modules."""
+    from apache_aiops.mcp_server.tools.httpd import apache_static_directives
+    _print(apache_static_directives(target=target))
+
+
 @app.command("build")
 @cli_errors
 def build(target: Target = None) -> None:
