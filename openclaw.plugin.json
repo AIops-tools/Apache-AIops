@@ -1,0 +1,24 @@
+{
+  "id": "apache-aiops",
+  "name": "Apache HTTP Server AIops",
+  "description": "Governed Apache HTTP Server diagnosis — 8 MCP tools with audit.",
+  "skills": [
+    "./skills"
+  ],
+  "mcpServers": {
+    "apache-aiops": {
+      "transport": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "apache-aiops==0.1.0",
+        "apache-aiops-mcp"
+      ]
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

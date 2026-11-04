@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "apache-aiops": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "apache-aiops==0.1.0",
+        "apache-aiops-mcp"
+      ]
+    }
+  }
+}

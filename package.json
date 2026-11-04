@@ -1,0 +1,20 @@
+{
+  "name": "@zw008/apache-aiops",
+  "version": "0.1.0",
+  "description": "Governed Apache HTTP Server diagnosis — 8 MCP tools with audit.",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://github.com/AIops-tools/Apache-AIops",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AIops-tools/Apache-AIops.git"
+  },
+  "openclaw": {
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2"
+    },
+    "build": {
+      "openclawVersion": "2026.3.24-beta.2"
+    }
+  }
+}
