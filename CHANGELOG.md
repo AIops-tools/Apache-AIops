@@ -6,6 +6,7 @@
 - Add configtest-preflighted graceful reload with dry-run and unknown-outcome reporting.
 - Preserve stderr output from Apache commands and report partial probe failures explicitly.
 - Prevent error-log reads from resolving into this tool's own audit/config directory.
+- Add GitHub CI for tests, lint, security scan and build.
 
 ## 0.1.0
 

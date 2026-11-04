@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [bootstrap, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install Python and dependencies
+        run: |
+          uv python install 3.11
+          uv sync --dev --python 3.11
+      - name: Tests
+        run: uv run pytest -q
+      - name: Lint
+        run: uv run ruff check .
+      - name: Security scan
+        run: uv run bandit -r apache_aiops -ll -q
+      - name: Build
+        run: uv build
