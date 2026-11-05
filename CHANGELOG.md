@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 — 2026-11-05
 
 - Expand to 17 governed MCP/CLI tools with build/runtime config, bounded mod_status/error-log reads and privacy-preserving access-status summaries.
 - Add configtest-preflighted graceful reload with dry-run and unknown-outcome reporting.
