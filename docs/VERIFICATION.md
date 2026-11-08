@@ -10,6 +10,31 @@ Apache's [apachectl manual](https://httpd.apache.org/docs/2.4/en/programs/apache
 
 The current 0.2.0 candidate wheel was rebuilt and installed into a new environment outside the source tree; its MCP registry reports 17 tools. Its `access-status` CLI parsed a sample common log from an operator-selected path and returned only status codes/counts, with no raw IP, URL or token. Its CLI read actual native 2.4.67 compiled modules, include tree and static directives; large directive output reported truncation. An earlier 0.2.0 candidate wheel was also installed outside the source tree; `apache_aiops.__file__` resolved under `site-packages`. Its CLI read the isolated service's actual 200 health response and ran a no-write graceful-reload preview that included a real `Syntax OK` preflight.
 
-## Not yet live verified
+## Disposable Linux VM verification (2026-11-08)
 
-The isolated lab's graceful reload could not signal its detached parent within the filesystem/process sandbox; the command returned nonzero and the tool correctly marked the outcome unknown. No successful isolated live reload, production access-log format, TLS deployment or write cycle has been tested. Graceful reload has no safe undo without the prior config file. Do not call the package production validated. The next gate is a disposable Apache 2.4 lab with a malformed vhost and a missing backend where graceful reload and recovery can be observed end to end.
+An isolated Debian container on the `Open-test` Ubuntu VM ran Apache 2.4.69
+with the 0.2.0 wheel installed. The CLI read its real version, `Syntax OK`,
+`mod_status` metrics and access-log status counts; the health page returned
+HTTP 200. A graceful-reload preview changed nothing. The real command was
+accepted, and the independent `mod_status` configuration generation increased
+from 1 to 2 while health stayed 200. The tool still reported `unknown`, which
+is truthful because a successful command and probe do not prove every worker
+loaded the new configuration.
+
+An intentionally invalid directive made `config-check` fail and blocked reload;
+the configuration generation stayed at 2. After removing it, a valid proxy
+rule pointing to an absent backend produced a real HTTP 503. `probe` reported
+`healthy: false`. This live run exposed that `diagnose` had returned
+`failedProbes: []` and `complete: true` without an overall health verdict.
+`diagnose` now also returns `unhealthyProbes: ["http"]` and `healthy: false`
+for this case; its regression tests failed before the fix and pass now. The
+proxy rule was removed and the health page returned 200 again. Current suite:
+136 passing tests, Ruff clean, Bandit 0 Medium+ and wheel/sdist build.
+
+## Still not live verified
+
+The earlier macOS isolated lab could not signal its detached Apache parent;
+the Linux container run above closed that gap. Production access-log formats,
+TLS deployments and behavior across a live fleet remain untested. Graceful
+reload has no safe undo without the prior config file. This disposable lab
+run does not establish production readiness.

@@ -87,6 +87,26 @@ def test_http_probe_does_not_call_login_redirect_healthy():
     assert result["location"] == "/login"
 
 
+def test_diagnose_names_an_unhealthy_http_probe_even_when_all_probes_return():
+    client = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(503)))
+    conn = ApacheConnection(
+        TargetConfig("lab", probe_url="http://127.0.0.1/health"),
+        runner=_runner, client=client,
+    )
+    result = httpd.diagnose(conn)
+    assert result["complete"] is True
+    assert result["failedProbes"] == []
+    assert result["unhealthyProbes"] == ["http"]
+    assert result["healthy"] is False
+
+
+def test_diagnose_without_http_probe_does_not_claim_service_health():
+    result = httpd.diagnose(ApacheConnection(TargetConfig("lab"), runner=_runner))
+    assert result["complete"] is True
+    assert result["healthy"] is None
+
+
 def test_config_failure_is_error_and_diagnosis_is_incomplete():
     def runner(argv, **kwargs):
         if argv == ["apachectl", "configtest"]:

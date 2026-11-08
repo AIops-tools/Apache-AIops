@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.1 — 2026-11-08
+
+- Report a completed but unhealthy HTTP probe separately from probe execution failures in `apache_diagnose`; return an explicit tri-state `healthy` verdict.
+
 ## v0.2.0 — 2026-11-05
 
 - Expand to 17 governed MCP/CLI tools with build/runtime config, bounded mod_status/error-log reads and privacy-preserving access-status summaries.

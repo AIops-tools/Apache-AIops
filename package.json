@@ -1,6 +1,6 @@
 {
   "name": "@zw008/apache-aiops",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Governed Apache HTTP Server operations — 17 MCP tools with audit.",
   "private": true,
   "license": "MIT",

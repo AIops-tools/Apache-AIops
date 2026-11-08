@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "apache-aiops",
   "displayName": "Apache HTTP Server AIops",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Governed Apache HTTP Server operations — 17 MCP tools with audit.",
   "author": {
     "name": "Wei Zhou",

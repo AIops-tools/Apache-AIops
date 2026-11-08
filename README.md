@@ -10,7 +10,7 @@ A dedicated, governed MCP server, CLI and skill for Apache HTTP Server with 17 M
 - Parsed config include tree, compiled modules and directives from static modules.
 - Optional machine-readable `mod_status` metrics, bounded error-log tail and privacy-preserving access-status summary.
 - Optional HTTP health status without downloading the response body.
-- `apache_diagnose` correlates the checks and preserves failures as errors with `data: null`.
+- `apache_diagnose` correlates checks, preserves failed probes as errors with `data: null`, and reports completed but unhealthy HTTP probes separately in `unhealthyProbes`. Its `healthy` verdict is `true`, `false` or `null` when health was not established; `complete` only means configured probes ran without errors.
 
 ## Setup from source
 

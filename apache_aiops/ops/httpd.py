@@ -73,9 +73,21 @@ def diagnose(conn: ApacheConnection) -> dict:
         except Exception as exc:
             probes[name] = {"data": None, "error": f"{type(exc).__name__}: {exc}"}
     failed = [name for name, result in probes.items() if result["error"] is not None]
+    http_data = probes.get("http", {}).get("data")
+    unhealthy = (
+        ["http"] if isinstance(http_data, dict) and http_data.get("healthy") is False else []
+    )
+    if unhealthy:
+        healthy = False
+    elif failed or not isinstance(http_data, dict):
+        healthy = None
+    else:
+        healthy = True if http_data.get("healthy") is True else None
     return {
         "probes": probes,
         "failedProbes": failed,
+        "unhealthyProbes": unhealthy,
         "complete": not failed,
+        "healthy": healthy,
         "httpProbeConfigured": bool(conn.target.probe_url),
     }
