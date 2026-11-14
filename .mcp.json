@@ -5,7 +5,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "apache-aiops==0.2.1",
+        "apache-aiops==0.2.2",
         "apache-aiops-mcp"
       ]
     }

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.2 — 2026-11-14
+
+- Clarify Apache configuration, module, probe and diagnosis tool inputs and results in MCP tool definitions.
+
 ## v0.2.1 — 2026-11-08
 
 - Report a completed but unhealthy HTTP probe separately from probe execution failures in `apache_diagnose`; return an explicit tri-state `healthy` verdict.

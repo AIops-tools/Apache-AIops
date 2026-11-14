@@ -1,6 +1,8 @@
 """Governed Apache HTTP Server read tools."""
 
-from typing import Optional
+from typing import Annotated, Optional
+
+from pydantic import Field
 
 from apache_aiops.governance import governed_tool, mark_unknown
 from apache_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
@@ -10,8 +12,16 @@ from apache_aiops.ops import httpd
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_config_includes(target: Optional[str] = None) -> dict:
-    """[READ] Show Apache's parsed config include tree with bounded output."""
+def apache_config_includes(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Show Apache's parsed config include tree with bounded output.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.config_includes(_get_connection(target))
 
 
@@ -26,24 +36,48 @@ def apache_compiled_modules(target: Optional[str] = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_static_directives(target: Optional[str] = None) -> dict:
-    """[READ] List directives from Apache's static modules with bounded output."""
+def apache_static_directives(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] List directives from Apache's static modules with bounded output.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.static_directives(_get_connection(target))
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_build(target: Optional[str] = None) -> dict:
-    """[READ] Show Apache build options and compiled paths."""
+def apache_build(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Show Apache build options and compiled paths.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.build(_get_connection(target))
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_runtime_config(target: Optional[str] = None) -> dict:
-    """[READ] Dump Apache's parsed runtime configuration."""
+def apache_runtime_config(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Dump Apache's parsed runtime configuration.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.runtime_config(_get_connection(target))
 
 
@@ -58,8 +92,22 @@ def apache_server_status(target: Optional[str] = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_error_log(limit: int = 50, target: Optional[str] = None) -> dict:
-    """[READ] Tail an operator-configured Apache error log, with explicit truncation."""
+def apache_error_log(
+    limit: Annotated[
+        int,
+        Field(
+            description=("Maximum number of records to return; the operation enforces its bound.")
+        ),
+    ] = 50,
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Tail an operator-configured Apache error log, with explicit truncation.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.error_log(_get_connection(target), limit)
 
 
@@ -80,19 +128,33 @@ def apache_graceful_reload(dry_run: bool = False, target: Optional[str] = None) 
     check = httpd.config_check(conn)
     before = httpd.probe(conn) if conn.target.probe_url else None
     if dry_run:
-        return {"dryRun": True, "configCheck": check, "probeBefore": before,
-                "wouldRun": "apachectl graceful"}
+        return {
+            "dryRun": True,
+            "configCheck": check,
+            "probeBefore": before,
+            "wouldRun": "apachectl graceful",
+        }
     response = conn.graceful()
     try:
         after = httpd.probe(conn) if conn.target.probe_url else None
     except Exception as exc:
-        return mark_unknown({"accepted": True, "response": response, "probeAfter": None,
-                             "probeError": f"Probe failed after reload: {type(exc).__name__}"})
-    return mark_unknown({
-        "accepted": True, "response": response, "probeBefore": before,
-        "probeAfter": after,
-        "note": "A successful command/probe does not prove all workers loaded new config.",
-    })
+        return mark_unknown(
+            {
+                "accepted": True,
+                "response": response,
+                "probeAfter": None,
+                "probeError": f"Probe failed after reload: {type(exc).__name__}",
+            }
+        )
+    return mark_unknown(
+        {
+            "accepted": True,
+            "response": response,
+            "probeBefore": before,
+            "probeAfter": after,
+            "note": "A successful command/probe does not prove all workers loaded new config.",
+        }
+    )
 
 
 @mcp.tool()
@@ -106,24 +168,54 @@ def apache_version(target: Optional[str] = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_config_check(target: Optional[str] = None) -> dict:
-    """[READ] Run Apache's native config syntax test."""
+def apache_config_check(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Run Apache's native config syntax test.
+
+    Use before a reload to check syntax; use apache_diagnose for correlated service and HTTP
+    probe results.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.config_check(_get_connection(target))
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_vhosts(target: Optional[str] = None) -> dict:
-    """[READ] Show Apache's parsed virtual-host mapping."""
+def apache_vhosts(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Show Apache's parsed virtual-host mapping.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.vhosts(_get_connection(target))
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_modules(target: Optional[str] = None) -> dict:
-    """[READ] List Apache's loaded modules."""
+def apache_modules(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] List Apache's loaded modules.
+
+    Use for currently loaded modules; use apache_compiled_modules for modules built into the
+    binary.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.modules(_get_connection(target))
 
 
@@ -138,6 +230,16 @@ def apache_probe(target: Optional[str] = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors()
-def apache_diagnose(target: Optional[str] = None) -> dict:
-    """[READ] Correlate version, config, vhosts, modules and optional HTTP probe."""
+def apache_diagnose(
+    target: Annotated[
+        Optional[str],
+        Field(description=("Configured target name; omit to use the default connection.")),
+    ] = None,
+) -> dict:
+    """[READ] Correlate version, config, vhosts, modules and optional HTTP probe.
+
+    Use for cross-probe triage; use apache_config_check for syntax validation alone.
+
+    Result: structured data or an explicit, sanitized operation error.
+    """
     return httpd.diagnose(_get_connection(target))
